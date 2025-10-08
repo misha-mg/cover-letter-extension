@@ -1,0 +1,32 @@
+{
+  "name": "Cover Letter Generator",
+  "description": "Generate customized cover letters based on job descriptions",
+  "version": "1.0",
+  "manifest_version": 3,
+  "permissions": [
+    "storage",
+    "contextMenus",
+    "activeTab",
+    "notifications",
+    "scripting",
+      "clipboardWrite",
+      "tabs"
+  ],
+  "background": {
+    "service_worker": "src/scripts/background.js"
+  },
+  "host_permissions": ["<all_urls>"],
+  "commands": {
+    "generate_cover_letter": {
+      "suggested_key": {
+        "default": "Alt+Shift+L",
+        "mac": "Alt+Shift+L"
+      },
+      "description": "Generate cover letter from selected text"
+    }
+  },
+  "action": {
+    "default_popup": "src/pages/popup.html",
+    "default_icon": "icon.png"
+  }
+}

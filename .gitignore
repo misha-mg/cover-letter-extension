@@ -1,0 +1,39 @@
+# --- Secrets & environment ---
+.env
+.env.*
+.env.local
+.env.*.local
+env.js
+!.env.example
+
+# --- Logs ---
+*.log
+logs/
+npm-debug.log*
+yarn-error.log*
+
+# --- OS / editor ---
+.DS_Store
+.idea/
+.vscode/
+
+# --- Build artifacts / packages ---
+dist/
+build/
+coverage/
+*.zip
+
+# --- Dependencies ---
+node_modules/
+
+# --- Certificates / keys ---
+*.pem
+*.key
+*.crt
+*.pfx
+*.p12
+*.cer
+*.der
+*.jks
+*.keystore
+
