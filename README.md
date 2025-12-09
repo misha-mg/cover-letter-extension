@@ -1,10 +1,10 @@
 # Cover Letter Generator Extension
 
-Browser extension that uses AI to generate personalized cover letters. Paste your template and job description, get a tailored cover letter instantly. Features keyboard shortcuts, auto-save, and clipboard integration. Powered by OpenAI.
+Browser extension that uses AI to generate personalized cover letters. Paste your template and job description, get a tailored cover letter instantly. Features keyboard shortcuts, auto-save, and clipboard integration. Powered via OpenRouter (OpenAI models through OpenRouter).
 
 ## 🎯 Features
 
-- **AI-Powered Generation**: Uses OpenAI GPT models to create personalized cover letters
+- **AI-Powered Generation**: Uses OpenRouter (OpenAI models via OpenRouter) to create personalized cover letters
 - **Template-Based**: Save your base cover letter and reuse it for multiple applications
 - **Context Menu Integration**: Right-click selected text to generate a cover letter
 - **Keyboard Shortcuts**: Use `Alt+Shift+L` to quickly generate from selected text
@@ -18,15 +18,21 @@ Browser extension that uses AI to generate personalized cover letters. Paste you
 ```
 cover-extension/
 ├── manifest.json           # Chrome extension manifest (v3)
-├── env.js                  # Environment configuration (API keys, model settings)
-├── api.js                  # OpenAI API wrapper with GPT-4 and GPT-5 support
+├── env.example.js          # Example environment configuration (copy to src/config/env.js)
 ├── icon.png                # Extension icon
 ├── src/
+│   ├── config/
+│   │   └── env.js          # Local environment configuration (gitignored)
+│   ├── api/
+│   │   ├── prompt.js       # Shared system prompt
+│   │   ├── openrouter.js   # OpenRouter API wrapper
+│   │   └── clipboard.js    # Clipboard/notification helpers
+│   ├── background/
+│   │   └── background.js   # Background service worker (context menu, shortcuts)
 │   ├── pages/
 │   │   └── popup.html      # Extension popup interface
 │   ├── scripts/
-│   │   ├── popup.js        # Popup logic and UI interactions
-│   │   └── background.js   # Background service worker (context menu, shortcuts)
+│   │   └── popup.js        # Popup logic and UI interactions
 │   └── styles/
 │       └── popup.css       # Popup styling
 └── README.md               # This file
@@ -37,7 +43,7 @@ cover-extension/
 ### Prerequisites
 
 - Google Chrome or Chromium-based browser (Edge, Brave, etc.)
-- OpenAI API key (get one at [platform.openai.com](https://platform.openai.com))
+- OpenRouter API key (get one at [openrouter.ai](https://openrouter.ai))
 
 ### Installation Steps
 
@@ -47,18 +53,21 @@ cover-extension/
    cd cover-extension
    ```
 
-2. **Configure your OpenAI API key**
+2. **Configure your OpenRouter API key**
    
-   Open `env.js` and update the configuration:
+   Copy `env.example.js` to `src/config/env.js` and update the configuration:
    ```javascript
    window.ENV = {
-     OPENAI_API_KEY: 'your-api-key-here',
-     OPENAI_MODEL: 'gpt-4o-mini',  // or 'gpt-5-nano' for GPT-5
-     // ... other settings
+     OPENROUTER_API_BASE: 'https://openrouter.ai/api/v1',
+     OPENROUTER_API_KEY: '<your-openrouter-api-key>',
+     OPENROUTER_MODEL: 'openai/gpt-5-mini',
+     TIMEOUT_MS: 30000,
+     MAX_TOKENS: 15000,
+     TEMPERATURE: 0.5
    };
    ```
 
-   > ⚠️ **Security Warning**: Never commit real API keys to version control. Consider using a local proxy server for production use.
+   > ⚠️ **Security Warning**: `src/config/env.js` is gitignored. Keep your real API key only in local copies and never commit it. Consider using a backend proxy for production use.
 
 3. **Load the extension in Chrome**
    
@@ -101,33 +110,24 @@ cover-extension/
 
 ## ⚙️ Configuration
 
-### Environment Variables (`env.js`)
+### Environment Variables (`src/config/env.js`)
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `OPENAI_API_BASE` | `https://api.openai.com/v1` | OpenAI API endpoint |
-| `OPENAI_API_KEY` | - | Your OpenAI API key (required) |
-| `OPENAI_MODEL` | `gpt-4o-mini` | Model to use (`gpt-4o-mini`, `gpt-5-nano`, etc.) |
+| `OPENROUTER_API_BASE` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint |
+| `OPENROUTER_API_KEY` | - | Your OpenRouter API key (required) |
+| `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model to use (any OpenRouter-supported model) |
 | `TIMEOUT_MS` | `30000` | Request timeout in milliseconds |
-| `INPUT_CHAR_LIMIT` | `8000` | Maximum input characters (~2000 tokens) |
-| `INPUT_JOB_RATIO` | `0.6` | Portion of budget for job description (60%) |
-| `MAX_TOKENS` | `5000` | Maximum output tokens |
+| `MAX_TOKENS` | `15000` | Maximum output tokens |
 | `TEMPERATURE` | `0.5` | Model temperature (0-2, higher = more creative) |
-| `TOP_P` | `1` | Nucleus sampling parameter |
-| `PRESENCE_PENALTY` | `0` | Presence penalty (-2 to 2) |
-| `FREQUENCY_PENALTY` | `0` | Frequency penalty (-2 to 2) |
-| `REASONING_EFFORT` | `none` | GPT-5 reasoning effort (`none`, `low`, `medium`, `high`) |
 
 ### Model Support
 
-The extension supports both GPT-4 and GPT-5 models:
-
-- **GPT-4 models** (e.g., `gpt-4o-mini`): Use Chat Completions API
-- **GPT-5 models** (e.g., `gpt-5-nano`): Use Responses API with optional reasoning
+The extension calls OpenRouter, which can route to multiple providers (e.g., OpenAI models such as `openai/gpt-5-mini`, `openai/gpt-4o-mini`, or any other OpenRouter-supported model you configure in `env.js`).
 
 ### Customizing the Prompt
 
-The AI prompt can be customized in `api.js` (lines 20-28). The default prompt:
+The AI prompt can be customized in `src/api/prompt.js`. The default prompt:
 - Uses your template's tone and structure
 - Mentions specific technologies from the job description
 - Keeps the letter clear and professional
@@ -137,12 +137,12 @@ The AI prompt can be customized in `api.js` (lines 20-28). The default prompt:
 
 1. **API Key Protection**
    - Never commit real API keys to public repositories
-   - Consider using environment variables or a secure vault
+   - Keep `src/config/env.js` local (it is gitignored) and share only `env.example.js`
    - For production, use a backend proxy server instead of client-side keys
 
 2. **Local Storage**
    - All data (templates, job descriptions) is stored locally using Chrome Storage API
-   - No data is sent to external servers except OpenAI API calls
+   - No data is sent to external servers except OpenRouter API calls
 
 3. **Permissions**
    - `storage`: Store templates and settings locally
@@ -151,6 +151,7 @@ The AI prompt can be customized in `api.js` (lines 20-28). The default prompt:
    - `notifications`: Show generation status
    - `scripting`: Inject clipboard scripts
    - `clipboardWrite`: Copy results to clipboard
+    - `tabs`: Query active tab for generation/copy targets
    - `host_permissions`: Access any URL for text selection
 
 ## 🛠️ Development
@@ -162,6 +163,13 @@ The AI prompt can be customized in `api.js` (lines 20-28). The default prompt:
 3. Reload the extension in Chrome:
    - Go to `chrome://extensions/`
    - Click the refresh icon on your extension card
+
+### Tooling
+
+- Install dev dependencies: `npm install`
+- Lint source: `npm run lint`
+- Format source: `npm run format`
+- Full check (lint + prettier check): `npm run check`
 
 ### Testing
 
@@ -175,26 +183,17 @@ The AI prompt can be customized in `api.js` (lines 20-28). The default prompt:
 
 Before distributing:
 
-1. Remove or replace real API keys in `env.js`
+1. Remove or replace real API keys in `src/config/env.js`
 2. Update version number in `manifest.json`
 3. Test thoroughly in different scenarios
 4. Consider adding a backend proxy for API calls
 
 ## 📝 How It Works
 
-1. **User Input**: You provide a base cover letter template and job description
-2. **Input Processing**: The extension intelligently truncates inputs to fit token limits
-3. **API Call**: Sends a formatted prompt to OpenAI's API
-4. **AI Generation**: GPT model generates a personalized cover letter
-5. **Output Handling**: Result is displayed, copied to clipboard, and stored locally
-
-### Token Budget Management
-
-The extension manages token limits intelligently:
-- Default limit: 8000 characters (~2000 tokens)
-- Job description gets 60% of budget (4800 chars)
-- Template gets 40% of budget (3200 chars)
-- Output is capped at configurable max tokens
+1. **User Input**: You provide a base cover letter template and a job description in the popup (both are auto-saved to `chrome.storage.local`).
+2. **Context Menu / Shortcut**: Background service worker captures selected text, stores `currentOffer`, calls OpenRouter via `CoverAPI.generateCoverLetter`, copies the result to the active tab with `CoverClipboard.copyToTab`, and shows a notification (also opens the popup for visibility).
+3. **Popup Generation**: Clicking Generate in the popup uses the same OpenRouter flow and copies the result to the clipboard.
+4. **Result Handling**: The generated letter is shown in the popup, stored locally (`lastGenerated`), and copied to the clipboard when possible.
 
 ## 🤝 Contributing
 
@@ -202,14 +201,14 @@ Feel free to submit issues, fork the repository, and create pull requests for an
 
 ## 📄 License
 
-This project is for personal use. Please ensure you comply with OpenAI's terms of service when using their API.
+This project is for personal use. Please ensure you comply with OpenRouter and model-provider terms of service when using their APIs.
 
 ## 🙏 Acknowledgments
 
 - Built with Chrome Extension Manifest V3
-- Powered by OpenAI GPT models
+- Powered by OpenRouter (accessing OpenAI models)
 - UI inspired by modern design principles
 
 ---
 
-**Note**: This extension requires an active OpenAI API subscription. API usage costs apply based on your model choice and usage volume.
+**Note**: This extension requires an active OpenRouter API key. Usage costs apply based on your chosen model and provider settings in OpenRouter.

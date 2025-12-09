@@ -13,7 +13,7 @@
       "tabs"
   ],
   "background": {
-    "service_worker": "src/scripts/background.js"
+    "service_worker": "src/background/background.js"
   },
   "host_permissions": ["<all_urls>"],
   "commands": {
@@ -27,6 +27,7 @@
   },
   "action": {
     "default_popup": "src/pages/popup.html",
-    "default_icon": "icon.png"
+    "default_icon": "icon.png",
+    "default_title": "Cover Letter Generator"
   }
 }

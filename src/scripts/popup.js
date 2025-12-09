@@ -1,167 +1,176 @@
-// Cover Letter Generator Extension (migrated to src/scripts)
-document.addEventListener('DOMContentLoaded', function() {
+// Cover Letter Generator Extension (popup logic)
+document.addEventListener('DOMContentLoaded', () => {
   const generateBtn = document.getElementById('generateBtn');
-  const defaultCoverLetter = document.getElementById('defaultCoverLetter');
-  const currentOffer = document.getElementById('currentOffer');
+  const templateInput = document.getElementById('defaultCoverLetter');
+  const jobInput = document.getElementById('currentOffer');
   const resultDiv = document.getElementById('result');
   const saveDefaultBtn = document.getElementById('saveDefaultBtn');
   const saveStatus = document.getElementById('saveStatus');
 
-  // Load saved data from Chrome storage
-  chrome.storage.local.get(['defaultCoverLetter', 'currentOffer', 'autoGenerate'], function(result) {
+  initStorageSync({ templateInput, jobInput, generateBtn, saveStatus });
+  initMessageListeners({ jobInput, saveStatus });
+  initAutoSave({ templateInput, jobInput });
+  initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus });
+  initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveStatus });
+});
+
+function initStorageSync({ templateInput, jobInput, generateBtn, saveStatus }) {
+  chrome.storage.local.get(['defaultCoverLetter', 'currentOffer', 'autoGenerate'], (result) => {
     if (chrome.runtime.lastError) {
       console.error('Error loading from storage:', chrome.runtime.lastError);
-      showSaveStatus('Error loading saved data', 'error');
+      showSaveStatus(saveStatus, 'Error loading saved data', 'error');
       return;
     }
-    if (result.defaultCoverLetter) {
-      defaultCoverLetter.value = result.defaultCoverLetter;
-    }
-    if (result.currentOffer) {
-      currentOffer.value = result.currentOffer;
-    }
+
+    if (result.defaultCoverLetter) templateInput.value = result.defaultCoverLetter;
+    if (result.currentOffer) jobInput.value = result.currentOffer;
+
     if (result.defaultCoverLetter || result.currentOffer) {
-      setTimeout(() => {
-        showSaveStatus('Previous text restored', 'success');
-      }, 100);
+      setTimeout(() => showSaveStatus(saveStatus, 'Previous text restored', 'success'), 100);
     }
 
-    // If background requested auto-generation, trigger it once and clear the flag
-    const urlHasAuto = new URLSearchParams(location.search).has('auto');
-    if ((result.autoGenerate || urlHasAuto) && generateBtn) {
-      setTimeout(() => {
-        const defaultText = defaultCoverLetter.value.trim();
-        const offerText = currentOffer.value.trim();
-        if (defaultText && offerText) {
-          generateBtn.click();
-        }
-        chrome.storage.local.remove('autoGenerate');
-      }, 150);
-    }
+    maybeAutoGenerate({ result, templateInput, jobInput, generateBtn });
   });
+}
 
-  // Listen for messages (fill from selection)
-  chrome.runtime.onMessage.addListener(function(request) {
+function maybeAutoGenerate({ result, templateInput, jobInput, generateBtn }) {
+  const urlHasAuto = new URLSearchParams(location.search).has('auto');
+  if (!generateBtn || (!result.autoGenerate && !urlHasAuto)) return;
+
+  setTimeout(() => {
+    const template = templateInput.value.trim();
+    const job = jobInput.value.trim();
+    if (template && job) generateBtn.click();
+    chrome.storage.local.remove('autoGenerate');
+  }, 150);
+}
+
+function initMessageListeners({ jobInput, saveStatus }) {
+  chrome.runtime.onMessage.addListener((request) => {
     if (request && request.action === 'setCurrentOffer' && typeof request.text === 'string') {
-      const existingText = currentOffer.value.trim();
-      if (existingText.endsWith(request.text.trim())) {
-        showSaveStatus('Offer text already added', 'success');
+      const existingText = jobInput.value.trim();
+      const incoming = request.text.trim();
+      if (incoming && existingText.endsWith(incoming)) {
+        showSaveStatus(saveStatus, 'Job description already added', 'success');
         return;
       }
-      const newText = existingText ? existingText + '\n\n' + request.text : request.text;
-      currentOffer.value = newText;
+      const newText = existingText ? `${existingText}\n\n${incoming}` : incoming;
+      jobInput.value = newText;
       chrome.storage.local.set({ currentOffer: newText });
-      showSaveStatus('Offer text filled from selection', 'success');
+      showSaveStatus(saveStatus, 'Job description filled from selection', 'success');
     }
   });
+}
 
-  // Auto-save both text areas as user types
-  defaultCoverLetter.addEventListener('input', function() {
-    chrome.storage.local.set({defaultCoverLetter: this.value}, function() {
+function initAutoSave({ templateInput, jobInput }) {
+  templateInput.addEventListener('input', function() {
+    chrome.storage.local.set({ defaultCoverLetter: this.value }, () => {
       if (chrome.runtime.lastError) {
         console.error('Error saving default cover letter:', chrome.runtime.lastError);
       }
     });
   });
 
-  currentOffer.addEventListener('input', function() {
-    chrome.storage.local.set({currentOffer: this.value}, function() {
+  jobInput.addEventListener('input', function() {
+    chrome.storage.local.set({ currentOffer: this.value }, () => {
       if (chrome.runtime.lastError) {
-        console.error('Error saving current offer:', chrome.runtime.lastError);
+        console.error('Error saving job description:', chrome.runtime.lastError);
       }
     });
   });
+}
 
-  // Handle Save Default Letter button click (explicit save confirmation)
-  saveDefaultBtn.addEventListener('click', function() {
-    const defaultText = defaultCoverLetter.value.trim();
-    if (!defaultText) {
-      showSaveStatus('Please enter a default cover letter to save', 'error');
+function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
+  saveDefaultBtn.addEventListener('click', () => {
+    const template = templateInput.value.trim();
+    if (!template) {
+      showSaveStatus(saveStatus, 'Please enter a default cover letter to save', 'error');
       return;
     }
     saveDefaultBtn.textContent = 'Saving...';
     saveDefaultBtn.disabled = true;
-    chrome.storage.local.set({defaultCoverLetter: defaultText}, function() {
+    chrome.storage.local.set({ defaultCoverLetter: template }, () => {
       saveDefaultBtn.textContent = 'Save as Template';
       saveDefaultBtn.disabled = false;
       if (chrome.runtime.lastError) {
         console.error('Error saving template:', chrome.runtime.lastError);
-        showSaveStatus('Failed to save: ' + chrome.runtime.lastError.message, 'error');
+        showSaveStatus(saveStatus, 'Failed to save: ' + chrome.runtime.lastError.message, 'error');
       } else {
-        showSaveStatus('Template saved successfully!', 'success');
+        showSaveStatus(saveStatus, 'Template saved successfully!', 'success');
       }
     });
   });
+}
 
-  // Handle Generate button click
-  generateBtn.addEventListener('click', function() {
-    const defaultText = defaultCoverLetter.value.trim();
-    const offerText = currentOffer.value.trim();
-    if (!defaultText || !offerText) {
-      showResult('Please fill in both fields before generating.', 'error');
+function initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveStatus }) {
+  generateBtn.addEventListener('click', () => {
+    const template = templateInput.value.trim();
+    const job = jobInput.value.trim();
+    if (!template || !job) {
+      showResult(resultDiv, 'Please fill in both fields before generating.', 'error');
       return;
     }
+
     generateBtn.textContent = 'Generating...';
     generateBtn.disabled = true;
     (async () => {
       try {
-        if (window.CoverAPI && window.ENV && window.ENV.OPENAI_API_KEY) {
-          const generated = await window.CoverAPI.callOpenAI(defaultText, offerText);
-          showResult(generated || 'No content returned', 'success');
-          try { await navigator.clipboard.writeText(generated || ''); showSaveStatus('Copied to clipboard', 'success'); } catch (_) {}
+        if (globalThis.CoverAPI && globalThis.ENV && globalThis.ENV.OPENROUTER_API_KEY) {
+          const generated = await globalThis.CoverAPI.callOpenAI(template, job);
+          showResult(resultDiv, generated || 'No content returned', 'success');
+          try {
+            await navigator.clipboard.writeText(generated || '');
+            showSaveStatus(saveStatus, 'Copied to clipboard', 'success');
+          } catch (_) {}
         } else {
-          showResult('No OpenAI API key configured. Please set OPENAI_API_KEY in env.js or configure a proxy server.', 'error');
+          showResult(resultDiv, 'No OpenRouter API key configured. Please set OPENROUTER_API_KEY in src/config/env.js.', 'error');
         }
       } catch (e) {
-        showResult(`Generation failed: ${e.message || e}`, 'error');
+        showResult(resultDiv, `Generation failed: ${e?.message || e}`, 'error');
       } finally {
         generateBtn.textContent = 'Generate';
         generateBtn.disabled = false;
       }
     })();
   });
+}
 
-  // Local generation helpers removed — generation now requires OpenAI API
+function showResult(resultDiv, message, type) {
+  resultDiv.textContent = message;
+  resultDiv.style.display = 'block';
+  if (type === 'error') {
+    resultDiv.style.borderLeft = '4px solid #ea4335';
+    resultDiv.style.background = '#fce8e6';
+  } else {
+    resultDiv.style.borderLeft = '4px solid #34a853';
+    resultDiv.style.background = '#f8f9fa';
+  }
 
-  function showResult(message, type) {
-    resultDiv.textContent = message;
-    resultDiv.style.display = 'block';
-    if (type === 'error') {
-      resultDiv.style.borderLeft = '4px solid #ea4335';
-      resultDiv.style.background = '#fce8e6';
-    } else {
-      resultDiv.style.borderLeft = '4px solid #34a853';
-      resultDiv.style.background = '#f8f9fa';
-    }
-    if (type === 'success') {
-      // Remove any existing copy button
-      const existing = document.querySelector('.copy-btn');
-      if (existing) existing.remove();
+  const existing = document.querySelector('.copy-btn');
+  if (existing) existing.remove();
 
-      const copyBtn = document.createElement('button');
-      copyBtn.textContent = 'Copy';
-      copyBtn.className = 'copy-btn';
+  if (type === 'success') {
+    const copyBtn = document.createElement('button');
+    copyBtn.textContent = 'Copy';
+    copyBtn.className = 'copy-btn';
 
-      copyBtn.addEventListener('click', function() {
-        navigator.clipboard.writeText(message).then(function() {
-          copyBtn.textContent = 'Copied!';
-          setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-        });
+    copyBtn.addEventListener('click', () => {
+      navigator.clipboard.writeText(message).then(() => {
+        copyBtn.textContent = 'Copied!';
+        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
       });
+    });
 
-      // Place button after the result block
-      resultDiv.insertAdjacentElement('afterend', copyBtn);
-    }
+    resultDiv.insertAdjacentElement('afterend', copyBtn);
   }
+}
 
-  function showSaveStatus(message, type) {
-    if (saveStatus) {
-      saveStatus.textContent = message;
-      saveStatus.className = 'save-status ' + type;
-      setTimeout(() => {
-        saveStatus.textContent = '';
-        saveStatus.className = 'save-status';
-      }, 3000);
-    }
-  }
-});
+function showSaveStatus(saveStatus, message, type) {
+  if (!saveStatus) return;
+  saveStatus.textContent = message;
+  saveStatus.className = 'save-status ' + type;
+  setTimeout(() => {
+    saveStatus.textContent = '';
+    saveStatus.className = 'save-status';
+  }, 3000);
+}
