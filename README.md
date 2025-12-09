@@ -183,10 +183,12 @@ The AI prompt can be customized in `src/api/prompt.js`. The default prompt:
 
 Before distributing:
 
-1. Remove or replace real API keys in `src/config/env.js`
-2. Update version number in `manifest.json`
-3. Test thoroughly in different scenarios
-4. Consider adding a backend proxy for API calls
+1. Install dependencies: `npm install`
+2. Bundle the OpenRouter client: `npm run build` (outputs `dist/openrouter.bundle.js`)
+3. Remove or replace real API keys in `src/config/env.js`
+4. Update version number in `manifest.json`
+5. Test thoroughly in different scenarios
+6. Consider adding a backend proxy for API calls
 
 ## 📝 How It Works
 

@@ -2,7 +2,7 @@
 const __COVER_SCRIPTS__ = [
   'src/config/env.js',
   'src/api/prompt.js',
-  'src/api/openrouter.js',
+  'dist/openrouter.bundle.js',
   'src/api/clipboard.js'
 ];
 __COVER_SCRIPTS__.forEach((path) => {
