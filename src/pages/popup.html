@@ -1,51 +1,101 @@
 <!doctype html>
-<html>
+<html lang="en">
   <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Cormorant+Infant:ital,wght@0,600;0,700;1,600&family=Newsreader:ital,opsz,wght@0,6..72,400;0,6..72,500;0,6..72,600;1,6..72,400&display=swap"
+      rel="stylesheet"
+    />
     <link rel="stylesheet" href="../styles/popup.css" />
   </head>
   <body>
-    <div class="container">
-      <h1>Letter Creator</h1>
+    <div class="atmosphere" aria-hidden="true"></div>
+    <div class="grain" aria-hidden="true"></div>
 
-      <details class="form-group" id="defaultCoverSection">
-        <summary style="cursor: pointer; font-weight: 600; color: #555">
-          Default Cover Letter
-        </summary>
-        <div style="margin-top: 12px">
-          <textarea
-            id="defaultCoverLetter"
-            class="defaultCoverLetter"
-            placeholder="Enter your base cover letter template here..."
-          ></textarea>
-          <div class="button-group">
-            <button id="saveDefaultBtn" class="save-btn">
-              Save as template
-            </button>
-            <span id="saveStatus" class="save-status"></span>
+    <div class="popup-root">
+      <header class="masthead anim-in" style="--anim-delay: 0ms">
+        <p class="masthead-eyebrow">Letter Creator</p>
+        <h1 class="masthead-title">Tailored cover</h1>
+      </header>
+
+      <main class="surface anim-in" style="--anim-delay: 45ms">
+        <div class="composer-blocks">
+          <div class="composer-block anim-in" style="--anim-delay: 90ms">
+            <span class="block-type-label" id="label-template">Template</span>
+            <details class="disclosure" id="defaultCoverSection">
+              <summary class="disclosure-trigger">
+                <span class="disclosure-label">Default cover letter</span>
+              </summary>
+              <div class="disclosure-body">
+                <label class="visually-hidden" for="defaultCoverLetter"
+                  >Default cover letter</label
+                >
+                <textarea
+                  id="defaultCoverLetter"
+                  class="field block-textarea--template"
+                  placeholder="Your base letter — tone, structure, sign-off..."
+                  aria-describedby="label-template"
+                ></textarea>
+                <div class="button-group">
+                  <button type="button" id="saveDefaultBtn" class="btn btn-primary">
+                    Save as template
+                  </button>
+                  <span id="saveStatus" class="save-status" role="status"></span>
+                </div>
+              </div>
+            </details>
+          </div>
+
+          <div class="composer-block anim-in" style="--anim-delay: 135ms">
+            <span class="block-type-label" id="label-role-text">Role text</span>
+            <details class="disclosure" id="jobDescriptionSection" open>
+              <summary class="disclosure-trigger">
+                <span class="disclosure-label">Job description</span>
+              </summary>
+              <div class="disclosure-body">
+                <label class="visually-hidden" for="currentOffer">Job description</label>
+                <textarea
+                  id="currentOffer"
+                  class="field block-textarea--job"
+                  placeholder="Paste the role text here..."
+                  aria-describedby="label-role-text"
+                ></textarea>
+                <div class="button-group compact">
+                  <button type="button" id="clearJobBtn" class="btn btn-ghost">
+                    Clear job text
+                  </button>
+                </div>
+              </div>
+            </details>
           </div>
         </div>
-      </details>
 
-      <div class="form-group">
-        <label for="currentOffer">Job Description:</label>
-        <textarea
-          id="currentOffer"
-          placeholder="Paste the job description here..."
-        ></textarea>
-        <div class="button-group compact">
-          <button id="clearJobBtn" class="secondary-btn">Clear job text</button>
+        <div class="cta-row anim-in" style="--anim-delay: 180ms">
+          <button type="button" id="generateBtn" class="btn btn-generate">
+            Generate
+          </button>
         </div>
-      </div>
 
-      <button id="generateBtn" class="generate-btn">Generate</button>
-
-      <div id="result" class="result"></div>
-      <div id="resultActions" class="result-actions">
-        <button id="copyResultBtn" class="secondary-btn">Copy</button>
-        <button id="insertResultBtn" class="secondary-btn">
-          Insert into page
-        </button>
-      </div>
+        <section
+          class="output-block anim-in"
+          style="--anim-delay: 225ms"
+          aria-labelledby="output-heading"
+        >
+          <h2 id="output-heading" class="output-heading">Complete cover letter</h2>
+          <div class="result-stack">
+            <div id="result" class="result" role="region" aria-live="polite"></div>
+            <div id="resultActions" class="result-actions">
+              <button type="button" id="copyResultBtn" class="btn btn-secondary">Copy</button>
+              <button type="button" id="insertResultBtn" class="btn btn-secondary">
+                Insert into page
+              </button>
+            </div>
+          </div>
+        </section>
+      </main>
     </div>
 
     <script src="../config/env.js"></script>

@@ -3,6 +3,9 @@
   "description": "Generate customized cover letters based on job descriptions",
   "version": "1.0",
   "manifest_version": 3,
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src 'self' https://openrouter.ai https://api.openrouter.ai;"
+  },
   "permissions": [
     "storage",
     "contextMenus",

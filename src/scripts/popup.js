@@ -1,5 +1,10 @@
 // Cover Letter Generator Extension (popup logic)
 document.addEventListener('DOMContentLoaded', () => {
+  const defaultCoverSection = document.getElementById('defaultCoverSection');
+  const jobDescriptionSection = document.getElementById('jobDescriptionSection');
+  if (defaultCoverSection) defaultCoverSection.open = false;
+  if (jobDescriptionSection) jobDescriptionSection.open = true;
+
   const generateBtn = document.getElementById('generateBtn');
   const templateInput = document.getElementById('defaultCoverLetter');
   const jobInput = document.getElementById('currentOffer');
@@ -148,6 +153,8 @@ function initMessageListeners({ jobInput, saveStatus }) {
           : incoming;
       jobInput.value = newText;
       chrome.storage.local.set({ currentOffer: newText });
+      const jobSection = document.getElementById('jobDescriptionSection');
+      if (jobSection) jobSection.open = true;
       showSaveStatus(
         saveStatus,
         'Job description filled from selection',
@@ -188,7 +195,7 @@ function initResultActions({
   insertResultBtn,
   saveStatus,
 }) {
-  resultActions.style.display = 'none';
+  resultActions.classList.remove('is-visible');
 
   copyResultBtn.addEventListener('click', async () => {
     const message = resultDiv.textContent.trim();
@@ -259,8 +266,13 @@ function initClearJob({ clearJobBtn, jobInput, resultDiv, resultActions }) {
   clearJobBtn.addEventListener('click', () => {
     jobInput.value = '';
     chrome.storage.local.set({ currentOffer: '' });
-    resultDiv.style.display = 'none';
-    resultActions.style.display = 'none';
+    resultDiv.classList.remove(
+      'is-shown',
+      'is-visible',
+      'result--error',
+      'result--success'
+    );
+    resultActions.classList.remove('is-visible');
   });
 }
 
@@ -378,16 +390,22 @@ function initGenerate({
 
 function showResult(resultDiv, resultActions, message, type) {
   resultDiv.textContent = message;
-  resultDiv.style.display = 'block';
-  if (type === 'error') {
-    resultDiv.style.borderLeft = '4px solid #ea4335';
-    resultDiv.style.background = '#fce8e6';
-  } else {
-    resultDiv.style.borderLeft = '4px solid #34a853';
-    resultDiv.style.background = '#f8f9fa';
-  }
+  resultDiv.classList.remove(
+    'result--error',
+    'result--success',
+    'is-visible',
+    'is-shown'
+  );
+  resultDiv.classList.add(
+    type === 'error' ? 'result--error' : 'result--success',
+    'is-shown'
+  );
 
-  resultActions.style.display = type === 'success' ? 'flex' : 'none';
+  requestAnimationFrame(() => {
+    resultDiv.classList.add('is-visible');
+  });
+
+  resultActions.classList.toggle('is-visible', type === 'success');
 }
 
 function showSaveStatus(saveStatus, message, type) {
