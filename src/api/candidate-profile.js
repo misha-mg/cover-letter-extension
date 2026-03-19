@@ -1,132 +1,100 @@
-// Structured candidate facts passed into the prompt (see src/api/prompt.js).
-// Replace this object with your own experience before generating real letters.
+// Reads candidate facts from src/config/candidate-profile.local.js (gitignored).
+// Copy candidate-profile.example.js → candidate-profile.local.js, or run npm install.
 const __COVER_CANDIDATE_GLOBAL__ =
   typeof window !== 'undefined' ? window : globalThis;
 
-const CANDIDATE_PROFILE = {
-  identity: {
-    fullName: 'Alex Morgan',
-    title: 'Front-End Developer',
-    location: 'Berlin, Germany',
-    summary:
-      'Front-end developer focused on product UI, design systems, and performance. Comfortable owning features end-to-end in React/TypeScript codebases and collaborating with design and backend teams.',
-  },
-  experience: {
-    commercialYears: '4+ years',
-    currentLevel: 'Mid-level Front-End Developer',
-    focus: ['SaaS dashboards', 'marketing sites', 'component libraries'],
-  },
-  coreSkills: [
-    'JavaScript (ES6+)',
-    'TypeScript',
-    'React',
-    'Next.js',
-    'HTML & semantic markup',
-    'CSS (including Tailwind CSS)',
-  ],
-  secondarySkills: [
-    'Node.js basics',
-    'REST APIs',
-    'Jest / React Testing Library',
-    'CI-friendly tooling (ESLint, Prettier)',
-    'Web performance (Core Web Vitals)',
-  ],
-  aiTools: ['IDE assistants', 'code review automation'],
-  languages: [
-    { name: 'English', level: 'C1' },
-    { name: 'German', level: 'B1' },
-  ],
-  softSkills: [
-    'clear written communication',
-    'async collaboration across time zones',
-    'pragmatic trade-offs under deadlines',
-  ],
-  education: [
-    {
-      degree: 'B.Sc. Computer Science',
-      school: 'Example University',
-      period: '2016 - 2020',
-    },
-  ],
-  roles: [
-    {
-      company: 'Example SaaS Inc.',
-      period: '2022 - Present',
-      title: 'Front-End Developer',
-      highlights: [
-        'Shipped customer-facing analytics dashboards used by 10k+ weekly active users.',
-        'Reduced largest contentful paint on the marketing site by ~35% via image strategy and bundle splitting.',
-        'Introduced a shared React component library adopted by three product squads.',
-      ],
-    },
-    {
-      company: 'Studio North',
-      period: '2020 - 2022',
-      title: 'Junior Front-End Developer',
-      highlights: [
-        'Built responsive campaign landing pages with strong accessibility baselines.',
-        'Partnered with designers to translate Figma specs into reusable components.',
-      ],
-    },
-  ],
-  achievements: [
-    {
-      id: 'dashboard_scale',
-      title: 'Scaled analytics UI',
-      metric: '10k+ WAU',
-      keywords: ['react', 'dashboard', 'performance', 'typescript'],
-      evidence:
-        'Delivered analytics dashboards with stable performance as usage grew past 10k weekly active users.',
-    },
-    {
-      id: 'web_perf',
-      title: 'Improved marketing site performance',
-      metric: '~35% LCP improvement',
-      keywords: ['performance', 'lcp', 'seo', 'next.js'],
-      evidence:
-        'Cut largest contentful paint on the marketing site by roughly 35% through image optimization and bundle work.',
-    },
-    {
-      id: 'design_system',
-      title: 'Component library adoption',
-      metric: '3 squads',
-      keywords: ['design system', 'react', 'components', 'collaboration'],
-      evidence:
-        'Maintained a shared React component library adopted by three product teams.',
-    },
-  ],
-  guardrails: {
-    doNotClaim: [
-      'native mobile (Swift/Kotlin) shipping experience',
-      'staff/principal title',
-      'formal team lead or people management',
-      'expertise in languages not listed above',
-    ],
-  },
-};
+const CANDIDATE_PROFILE =
+  __COVER_CANDIDATE_GLOBAL__.__COVER_CANDIDATE_PROFILE__;
 
 function formatProfileSection(title, values) {
   if (!Array.isArray(values) || values.length === 0) return '';
   return `${title}: ${values.join(', ')}`;
 }
 
+function snapshotLine(label, value) {
+  if (value == null) return '';
+  const s = String(value).trim();
+  if (!s) return '';
+  return `${label}: ${s}`;
+}
+
+function formatEducationList(education) {
+  if (!Array.isArray(education) || education.length === 0) return '';
+  const lines = education.map(
+    (e) => `- ${e.degree}, ${e.school} (${e.period})`
+  );
+  return `Education:\n${lines.join('\n')}`;
+}
+
+function formatRolesBlock(roles) {
+  if (!Array.isArray(roles) || roles.length === 0) return '';
+  const blocks = roles.map((r) => {
+    const hl = (r.highlights || []).map((h) => `  - ${h}`).join('\n');
+    return `${r.title} — ${r.company} (${r.period})\n${hl}`;
+  });
+  return `Work history:\n${blocks.join('\n\n')}`;
+}
+
+function formatPreferencesBlock(preferences) {
+  if (!preferences || typeof preferences !== 'object') return '';
+  const parts = [
+    formatProfileSection('Target roles', preferences.targetRoles),
+    formatProfileSection('Primary stack', preferences.primaryStack),
+    formatProfileSection('Secondary stack', preferences.secondaryStack),
+  ].filter(Boolean);
+  if (!parts.length) return '';
+  return `Preferences:\n${parts.join('\n')}`;
+}
+
+function formatSourceMetaBlock(sourceMeta) {
+  if (!sourceMeta || typeof sourceMeta !== 'object') return '';
+  const bits = [];
+  if (sourceMeta.sourceFile) bits.push(`source file: ${sourceMeta.sourceFile}`);
+  if (typeof sourceMeta.parsedFromCv === 'boolean')
+    bits.push(`parsed from CV: ${sourceMeta.parsedFromCv}`);
+  if (!bits.length) return '';
+  return `Profile source: ${bits.join('; ')}`;
+}
+
 function buildProfileSnapshot(profile = CANDIDATE_PROFILE) {
+  if (!profile || !profile.identity) {
+    throw new Error(
+      'Candidate profile is missing. Copy src/config/candidate-profile.example.js to src/config/candidate-profile.local.js (or run npm install), then reload the extension.'
+    );
+  }
+
+  const id = profile.identity;
+  const exp = profile.experience || {};
+
   const sections = [
-    `Candidate: ${profile.identity.fullName}`,
-    `Title: ${profile.identity.title}`,
-    `Location: ${profile.identity.location}`,
-    `Summary: ${profile.identity.summary}`,
-    `Commercial experience: ${profile.experience.commercialYears}`,
+    `Candidate: ${id.fullName}`,
+    snapshotLine('Headline', id.headline),
+    `Title: ${id.title}`,
+    snapshotLine('Location', id.location),
+    snapshotLine('Email', id.email),
+    snapshotLine('LinkedIn', id.linkedin),
+    snapshotLine('GitHub', id.github),
+    snapshotLine('Telegram', id.telegram),
+    `Summary: ${id.summary}`,
+    snapshotLine('Commercial experience', exp.commercialYears),
+    snapshotLine('Current level', exp.currentLevel),
+    formatProfileSection('Focus areas', exp.focus),
     formatProfileSection('Core skills', profile.coreSkills),
     formatProfileSection('Secondary skills', profile.secondarySkills),
+    formatProfileSection('AI skills', profile.aiSkills),
     formatProfileSection('AI tools', profile.aiTools),
     formatProfileSection(
       'Languages',
-      profile.languages.map(
+      (profile.languages || []).map(
         (language) => `${language.name} (${language.level})`
       )
     ),
     formatProfileSection('Soft skills', profile.softSkills),
+    formatEducationList(profile.education),
+    formatRolesBlock(profile.roles),
+    formatProfileSection('Notable projects / clients', profile.projects),
+    formatPreferencesBlock(profile.preferences),
+    formatSourceMetaBlock(profile.sourceMeta),
   ].filter(Boolean);
 
   return sections.join('\n');

@@ -7,14 +7,14 @@ function getCandidateProfile() {
   const profile = __COVER_PROMPT_GLOBAL__.CoverCandidateProfile?.PROFILE;
   if (!profile) {
     throw new Error(
-      'Candidate profile is missing. Ensure src/api/candidate-profile.js is loaded.'
+      'Candidate profile is missing. Load src/config/candidate-profile.local.js before candidate-profile.js (see popup.html / background.js).'
     );
   }
   return profile;
 }
 
 const DEFAULT_SYSTEM_PROMPT = `
-You write highly tailored cover letters for front-end developer roles.
+You write highly tailored cover letters for front-end and AI-enabled product engineering roles.
 
 Rules:
 - Use only facts provided in the candidate profile and the supplied job description.
@@ -46,7 +46,7 @@ Available achievements and evidence:
 ${achievementsSnapshot}
 
 Things the candidate must not claim:
-${profile.guardrails.doNotClaim.map((item) => `- ${item}`).join('\n')}
+${(profile.guardrails?.doNotClaim || []).map((item) => `- ${item}`).join('\n')}
 
 Page context:
 - Title: ${pageContext.title || 'Unknown'}

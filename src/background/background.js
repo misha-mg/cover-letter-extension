@@ -1,6 +1,7 @@
 // Load shared scripts (config, prompt, API, clipboard) in order.
 const __COVER_SCRIPTS__ = [
   'src/config/env.js',
+  'src/config/candidate-profile.local.js',
   'src/api/candidate-profile.js',
   'src/api/prompt.js',
   'dist/openrouter.bundle.js',

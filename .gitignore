@@ -5,6 +5,7 @@
 .env.*.local
 env.js
 /src/config/env.js
+/src/config/candidate-profile.local.js
 !.env.example
 
 # --- Logs ---

@@ -9,7 +9,7 @@ The UI is a compact popup; you can also trigger generation from a **context menu
 ## Features
 
 - **OpenRouter + Vercel AI SDK** — `generateText` with `@openrouter/ai-sdk-provider`, bundled for the extension runtime.
-- **Profile-grounded prompts** — `src/api/candidate-profile.js` supplies facts and guardrails; the model is instructed not to invent experience.
+- **Profile-grounded prompts** — `src/config/candidate-profile.local.js` (gitignored) supplies facts and guardrails; the model is instructed not to invent experience.
 - **Shared pipeline** — Popup and background service worker use the same `CoverAPI.generateCoverLetterDetailed` flow.
 - **Chrome storage** — Template, job text, and last result persist in `chrome.storage.local` with incremental saves.
 - **Delivery helpers** — Clipboard write in-page (with `execCommand` fallback), optional insert into focused `textarea` / `input` / `contenteditable`, toast + optional chime on success.
@@ -23,18 +23,22 @@ The UI is a compact popup; you can also trigger generation from a **context menu
 cover-extension/
 ├── manifest.json              # MV3 manifest
 ├── env.example.js             # Copy → src/config/env.js (API key, model, headers)
+├── scripts/
+│   └── ensure-local-candidate-profile.js   # postinstall: bootstrap local profile from example
 ├── LICENSE
 ├── package.json
 ├── src/
 │   ├── api/
-│   │   ├── candidate-profile.js   # Your structured CV facts (edit for yourself)
+│   │   ├── candidate-profile.js   # Profile helpers (reads global from local config)
 │   │   ├── clipboard.js           # Copy / insert / toast (scripting targets)
 │   │   ├── openrouter.js          # Source for esbuild bundle (CoverAPI)
 │   │   └── prompt.js              # System + user prompt assembly
 │   ├── background/
 │   │   └── background.js          # Context menu, shortcut, generation orchestration
 │   ├── config/
-│   │   └── env.js                 # Local only — created from env.example.js (gitignored)
+│   │   ├── env.js                      # Local only — from env.example.js (gitignored)
+│   │   ├── candidate-profile.example.js # Committed template for your CV JSON-shaped data
+│   │   └── candidate-profile.local.js   # Your real profile — from example + npm install (gitignored)
 │   ├── pages/
 │   │   └── popup.html
 │   ├── scripts/
@@ -49,7 +53,7 @@ cover-extension/
 
 ## How it works
 
-1. **Popup** loads `env.js`, `candidate-profile.js`, `prompt.js`, the **bundled** OpenRouter client (`dist/openrouter.bundle.js`), `clipboard.js`, then `popup.js`.
+1. **Popup** loads `env.js`, `candidate-profile.local.js`, `candidate-profile.js`, `prompt.js`, the **bundled** OpenRouter client (`dist/openrouter.bundle.js`), `clipboard.js`, then `popup.js`.
 2. **Service worker** uses `importScripts` for the same globals (paths resolved via `chrome.runtime.getURL`).
 3. **Prompt** (`prompt.js`) merges profile snapshot, achievements, guardrails, optional page title/URL, your template, and the job text.
 4. **Background** path: on context menu or command, selected text is stored as `currentOffer`, then `generateAndCopy` runs if both template and job text exist — it tries **insert into focused field** (when possible), **copy to clipboard** in the tab, updates storage and a short history, opens the popup when allowed, and shows a notification.
@@ -64,6 +68,7 @@ flowchart LR
   end
   subgraph shared [Shared scripts]
     ENV[env.js]
+    ProfileLocal[candidate-profile.local.js]
     Profile[candidate-profile.js]
     Prompt[prompt.js]
     Bundle[dist/openrouter.bundle.js]
@@ -71,11 +76,13 @@ flowchart LR
   end
   API[OpenRouter API]
   Popup --> ENV
+  Popup --> ProfileLocal
   Popup --> Profile
   Popup --> Prompt
   Popup --> Bundle
   Popup --> Clip
   BG --> ENV
+  BG --> ProfileLocal
   BG --> Profile
   BG --> Prompt
   BG --> Bundle
@@ -126,7 +133,15 @@ npm run build
 
 ### 4. Customize the candidate profile
 
-Edit `src/api/candidate-profile.js` with your real experience, skills, and `guardrails.doNotClaim` so the model stays honest.
+After `npm install`, you should have `src/config/candidate-profile.local.js` (gitignored), copied from `candidate-profile.example.js` if it did not exist. Edit **only** the local file with your real experience, skills, and `guardrails.doNotClaim` so the model stays honest. To reset from the template:
+
+```bash
+cp src/config/candidate-profile.example.js src/config/candidate-profile.local.js
+```
+
+**Why not `.env`?** This profile is a nested object (roles, achievements, arrays). A dedicated JS file matches how the extension loads scripts and keeps the same structure without a JSON-parse build step.
+
+The snapshot passed to the model can also include optional fields such as `identity.headline`, contact links (`email`, `linkedin`, `github`, `telegram`), `aiSkills`, `projects`, `preferences` (`targetRoles`, `primaryStack`, `secondaryStack`), and `sourceMeta`, plus formatted **education** and **work history** from `roles`.
 
 ### 5. Load unpacked in Chrome
 
@@ -186,6 +201,7 @@ For a stricter install, you could narrow host permissions to specific domains (t
 ## Security and privacy
 
 - **API keys in `env.js` are visible to anyone with filesystem access to your profile.** For a published extension on the Chrome Web Store, use a **backend proxy** instead of shipping keys.
+- **`candidate-profile.local.js` is personal data** — keep it gitignored; only the example file belongs in the repo.
 - **Vacancy text and templates** stay in local extension storage unless you send them to OpenRouter as part of generation.
 - Comply with **OpenRouter** and **model provider** terms of use.
 
@@ -195,7 +211,7 @@ For a stricter install, you could narrow host permissions to specific domains (t
 
 - **“CoverAPI is unavailable” / blank generation** — Run `npm run build` and confirm `dist/openrouter.bundle.js` exists.
 - **“No OpenRouter API key configured”** — Add `src/config/env.js` from `env.example.js`.
-- **“Candidate profile is missing”** — Ensure `src/api/candidate-profile.js` is present and loaded before `prompt.js` (see `popup.html` order).
+- **“Candidate profile is missing”** — Ensure `src/config/candidate-profile.local.js` exists (run `npm install` or copy from `candidate-profile.example.js`) and loads before `src/api/candidate-profile.js` in `popup.html` / `background.js`.
 - **Shortcut does nothing** — Some pages (e.g. `chrome://`) restrict scripting; try a normal HTTPS page with text selected.
 
 ---

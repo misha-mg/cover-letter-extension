@@ -129,7 +129,7 @@ function getFeedbackScript() {
           padding: 14px 18px;
           border-radius: 14px;
           color: #fff;
-          font: 600 14px/1.4 -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+          font: 600 14px/1.4 Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
           box-shadow: 0 18px 40px rgba(16, 24, 40, 0.28);
           background: linear-gradient(135deg, #1d9b5f, #157347);
           opacity: 0;
