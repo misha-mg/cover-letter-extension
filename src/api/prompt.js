@@ -1,59 +1,85 @@
-// Shared system prompt for cover letter generation.
-// Exposed globally so both popup and background can reuse it without duplication.
-const __COVER_PROMPT_GLOBAL__ = typeof window !== 'undefined' ? window : globalThis;
+// Shared prompt builder for cover letter generation.
+// Exposed globally so popup/background can reuse a single generation pipeline.
+const __COVER_PROMPT_GLOBAL__ =
+  typeof window !== 'undefined' ? window : globalThis;
+
+function getCandidateProfile() {
+  const profile = __COVER_PROMPT_GLOBAL__.CoverCandidateProfile?.PROFILE;
+  if (!profile) {
+    throw new Error(
+      'Candidate profile is missing. Ensure src/api/candidate-profile.js is loaded.'
+    );
+  }
+  return profile;
+}
+
+const DEFAULT_SYSTEM_PROMPT = `
+You write highly tailored cover letters for front-end developer roles.
+
+Rules:
+- Use only facts provided in the candidate profile and the supplied job description.
+- Never invent companies, achievements, years, titles, or technologies.
+- Follow the tone and structure of the base letter, but improve clarity and specificity.
+- Mention only technologies supported by the candidate profile.
+- Keep the letter concise, natural, and specific. Avoid generic enthusiasm and empty clichés.
+- Prefer 2 short body paragraphs plus a brief closing.
+- Target 130-180 words.
+- Output plain text only. No bullet points, no markdown, no headings.
+`;
+
+function buildGenerationRequest({
+  template = '',
+  job = '',
+  pageContext = {},
+}) {
+  const profile = getCandidateProfile();
+  const profileSnapshot =
+    __COVER_PROMPT_GLOBAL__.CoverCandidateProfile.buildProfileSnapshot(profile);
+  const achievementsSnapshot = (profile.achievements || [])
+    .map(
+      (achievement) =>
+        `- ${achievement.title} (${achievement.metric}). ${achievement.evidence}`
+    )
+    .join('\n');
+
+  const prompt = `
+Candidate profile:
+${profileSnapshot}
+
+Available achievements and evidence:
+${achievementsSnapshot}
+
+Things the candidate must not claim:
+${profile.guardrails.doNotClaim.map((item) => `- ${item}`).join('\n')}
+
+Page context:
+- Title: ${pageContext.title || 'Unknown'}
+- URL: ${pageContext.url || 'Unknown'}
+
+Writing task:
+- Write a personalized cover letter for this vacancy.
+- Target length: 130-180 words.
+- Highlight 2-4 of the strongest matching proof points.
+- Explain why the candidate is useful for this team in concrete terms.
+- Do not mention every skill from the profile. Curate only the most relevant details.
+- If the vacancy asks for a technology the candidate does not have, avoid claiming it and pivot to adjacent strengths.
+- Balance personality, relevance, and technical credibility.
+- Use 2-4 proof points with a natural flow.
+
+Cover letter example:
+${template || 'No base template provided.'}
+
+Vacancy text:
+${job || 'No vacancy text provided.'}
+`;
+
+  return {
+    system: DEFAULT_SYSTEM_PROMPT,
+    prompt,
+  };
+}
+
 __COVER_PROMPT_GLOBAL__.CoverPrompt = {
-  DEFAULT_SYSTEM_PROMPT: `
-You are an expert assistant that writes highly personalised, concise and professional cover letters for front-end developer vacancies.
-Your task is to generate a new cover letter based on (1) the candidate’s base letter, (2) the candidate’s CV, and (3) the text of the vacancy.
-
-**Rules:**
-
-1. **Language:**
-
-   * If the vacancy is in Ukrainian — write the letter in Ukrainian.
-   * If the vacancy is in English — write the letter in English.
-
-2. **Tone & Structure:**
-
-   * Follow the tone and structure of the base letter.
-   * Keep it friendly, confident, and professional.
-   * Maximum length: **180 words**.
-
-3. **Use only real data from the candidate’s CV:**
-   Include relevant details:
-
-   * 3+ years of commercial experience in e-commerce and web applications.
-   * Main stack: React, Next.js, Svelte/SvelteKit, TypeScript, JavaScript (ES6+), Tailwind.
-   * Additional experience: PHP, Blade templating, anime.js animations, responsive layouts.
-   * AI tools used in real projects: Cursor, V0, Lovable, MCP server automation.
-   * Key achievements:
-
-     * improved team efficiency by 30% with AI tools,
-     * built Trello MCP extension boosting PM/QA productivity by 20–25%,
-     * developed 10+ successful e-commerce and brand websites,
-     * improved architectures based on SOLID principles.
-   * Soft skills: fast learner, proactive, strong communicator, effective in cross-functional teamwork.
-
-4. **Adapt to the vacancy:**
-
-   * Mention only the technologies that appear in the vacancy **and** match the candidate’s skill set.
-   * Highlight experience relevant to the company’s product (e-commerce, animations, component architecture, performance optimisation, AI automation, etc.).
-   * If the vacancy mentions on-site work in **Warsaw**, include the sentence:
-     **“I am currently based in Warsaw and available for on-site work.”**
-
-5. **Company contextualisation:**
-
-   * Use the company name.
-   * Mention 1–2 reasons why the candidate would be valuable for their team (relevant stack, e-commerce experience, AI automation mindset, productivity improvements).
-
-6. **Restrictions:**
-
-   * Do not invent facts not present in the CV.
-   * Avoid clichés and keep the text natural and sincere.
-   * No more than one short paragraph about experience, one about fit, and a brief closing.
-
-**Final instruction:**
-Generate a personalised cover letter following all rules above, using the base letter tone as the foundation.
-`
+  DEFAULT_SYSTEM_PROMPT,
+  buildGenerationRequest,
 };
-

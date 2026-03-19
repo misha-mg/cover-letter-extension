@@ -48,14 +48,16 @@ cover-extension/
 ### Installation Steps
 
 1. **Clone or download the repository**
+
    ```bash
    git clone <repository-url>
    cd cover-extension
    ```
 
 2. **Configure your OpenRouter API key**
-   
+
    Copy `env.example.js` to `src/config/env.js` and update the configuration:
+
    ```javascript
    window.ENV = {
      OPENROUTER_API_BASE: 'https://openrouter.ai/api/v1',
@@ -63,14 +65,13 @@ cover-extension/
      OPENROUTER_MODEL: 'openai/gpt-5-mini',
      TIMEOUT_MS: 30000,
      MAX_TOKENS: 15000,
-     TEMPERATURE: 0.5
+     TEMPERATURE: 0.5,
    };
    ```
 
    > ⚠️ **Security Warning**: `src/config/env.js` is gitignored. Keep your real API key only in local copies and never commit it. Consider using a backend proxy for production use.
 
 3. **Load the extension in Chrome**
-   
    - Open Chrome and navigate to `chrome://extensions/`
    - Enable "Developer mode" (toggle in top-right corner)
    - Click "Load unpacked"
@@ -78,7 +79,6 @@ cover-extension/
    - The extension should now appear in your extensions list
 
 4. **Verify installation**
-   
    - Click the extension icon in your browser toolbar
    - You should see the "Letter Creator" popup
    - Test by entering a template and job description, then click "Generate"
@@ -112,14 +112,14 @@ cover-extension/
 
 ### Environment Variables (`src/config/env.js`)
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `OPENROUTER_API_BASE` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint |
-| `OPENROUTER_API_KEY` | - | Your OpenRouter API key (required) |
-| `OPENROUTER_MODEL` | `openai/gpt-5-mini` | Model to use (any OpenRouter-supported model) |
-| `TIMEOUT_MS` | `30000` | Request timeout in milliseconds |
-| `MAX_TOKENS` | `15000` | Maximum output tokens |
-| `TEMPERATURE` | `0.5` | Model temperature (0-2, higher = more creative) |
+| Variable              | Default                        | Description                                     |
+| --------------------- | ------------------------------ | ----------------------------------------------- |
+| `OPENROUTER_API_BASE` | `https://openrouter.ai/api/v1` | OpenRouter API endpoint                         |
+| `OPENROUTER_API_KEY`  | -                              | Your OpenRouter API key (required)              |
+| `OPENROUTER_MODEL`    | `openai/gpt-5-mini`            | Model to use (any OpenRouter-supported model)   |
+| `TIMEOUT_MS`          | `30000`                        | Request timeout in milliseconds                 |
+| `MAX_TOKENS`          | `15000`                        | Maximum output tokens                           |
+| `TEMPERATURE`         | `0.5`                          | Model temperature (0-2, higher = more creative) |
 
 ### Model Support
 
@@ -128,6 +128,7 @@ The extension calls OpenRouter, which can route to multiple providers (e.g., Ope
 ### Customizing the Prompt
 
 The AI prompt can be customized in `src/api/prompt.js`. The default prompt:
+
 - Uses your template's tone and structure
 - Mentions specific technologies from the job description
 - Keeps the letter clear and professional
@@ -151,7 +152,7 @@ The AI prompt can be customized in `src/api/prompt.js`. The default prompt:
    - `notifications`: Show generation status
    - `scripting`: Inject clipboard scripts
    - `clipboardWrite`: Copy results to clipboard
-    - `tabs`: Query active tab for generation/copy targets
+   - `tabs`: Query active tab for generation/copy targets
    - `host_permissions`: Access any URL for text selection
 
 ## 🛠️ Development

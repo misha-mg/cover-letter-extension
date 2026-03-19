@@ -4,33 +4,95 @@ document.addEventListener('DOMContentLoaded', () => {
   const templateInput = document.getElementById('defaultCoverLetter');
   const jobInput = document.getElementById('currentOffer');
   const resultDiv = document.getElementById('result');
+  const resultActions = document.getElementById('resultActions');
+  const copyResultBtn = document.getElementById('copyResultBtn');
+  const insertResultBtn = document.getElementById('insertResultBtn');
   const saveDefaultBtn = document.getElementById('saveDefaultBtn');
   const saveStatus = document.getElementById('saveStatus');
+  const clearJobBtn = document.getElementById('clearJobBtn');
 
-  initStorageSync({ templateInput, jobInput, generateBtn, saveStatus });
+  initStorageSync({
+    templateInput,
+    jobInput,
+    generateBtn,
+    saveStatus,
+    resultDiv,
+    resultActions,
+  });
+  initStorageWatchers({
+    jobInput,
+    resultDiv,
+    resultActions,
+    saveStatus,
+  });
   initMessageListeners({ jobInput, saveStatus });
   initAutoSave({ templateInput, jobInput });
   initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus });
-  initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveStatus });
+  initResultActions({
+    resultDiv,
+    resultActions,
+    copyResultBtn,
+    insertResultBtn,
+    saveStatus,
+  });
+  initClearJob({
+    clearJobBtn,
+    jobInput,
+    resultDiv,
+    resultActions,
+  });
+  initGenerate({
+    templateInput,
+    jobInput,
+    generateBtn,
+    resultDiv,
+    resultActions,
+    saveStatus,
+  });
 });
 
-function initStorageSync({ templateInput, jobInput, generateBtn, saveStatus }) {
-  chrome.storage.local.get(['defaultCoverLetter', 'currentOffer', 'autoGenerate'], (result) => {
-    if (chrome.runtime.lastError) {
-      console.error('Error loading from storage:', chrome.runtime.lastError);
-      showSaveStatus(saveStatus, 'Error loading saved data', 'error');
-      return;
+function initStorageSync({
+  templateInput,
+  jobInput,
+  generateBtn,
+  saveStatus,
+  resultDiv,
+  resultActions,
+}) {
+  chrome.storage.local.get(
+    [
+      'defaultCoverLetter',
+      'currentOffer',
+      'autoGenerate',
+      'lastGenerated',
+    ],
+    (result) => {
+      if (chrome.runtime.lastError) {
+        console.error('Error loading from storage:', chrome.runtime.lastError);
+        showSaveStatus(saveStatus, 'Error loading saved data', 'error');
+        return;
+      }
+
+      if (result.defaultCoverLetter) {
+        templateInput.value = result.defaultCoverLetter;
+      }
+      if (result.currentOffer) {
+        jobInput.value = result.currentOffer;
+      }
+
+      if (result.defaultCoverLetter || result.currentOffer) {
+        setTimeout(
+          () => showSaveStatus(saveStatus, 'Previous text restored', 'success'),
+          100
+        );
+      }
+
+      if (result.lastGenerated) {
+        showResult(resultDiv, resultActions, result.lastGenerated, 'success');
+      }
+      maybeAutoGenerate({ result, templateInput, jobInput, generateBtn });
     }
-
-    if (result.defaultCoverLetter) templateInput.value = result.defaultCoverLetter;
-    if (result.currentOffer) jobInput.value = result.currentOffer;
-
-    if (result.defaultCoverLetter || result.currentOffer) {
-      setTimeout(() => showSaveStatus(saveStatus, 'Previous text restored', 'success'), 100);
-    }
-
-    maybeAutoGenerate({ result, templateInput, jobInput, generateBtn });
-  });
+  );
 }
 
 function maybeAutoGenerate({ result, templateInput, jobInput, generateBtn }) {
@@ -45,38 +107,126 @@ function maybeAutoGenerate({ result, templateInput, jobInput, generateBtn }) {
   }, 150);
 }
 
+function initStorageWatchers({
+  jobInput,
+  resultDiv,
+  resultActions,
+  saveStatus,
+}) {
+  chrome.storage.onChanged.addListener((changes, areaName) => {
+    if (areaName !== 'local') return;
+
+    if (changes.currentOffer) {
+      jobInput.value = changes.currentOffer.newValue || '';
+    }
+
+    if (changes.lastGenerated && changes.lastGenerated.newValue) {
+      showResult(
+        resultDiv,
+        resultActions,
+        changes.lastGenerated.newValue,
+        'success'
+      );
+      showSaveStatus(saveStatus, 'Latest result restored', 'success');
+    }
+  });
+}
+
 function initMessageListeners({ jobInput, saveStatus }) {
   chrome.runtime.onMessage.addListener((request) => {
-    if (request && request.action === 'setCurrentOffer' && typeof request.text === 'string') {
-      const existingText = jobInput.value.trim();
+    if (
+      request &&
+      request.action === 'setCurrentOffer' &&
+      typeof request.text === 'string'
+    ) {
       const incoming = request.text.trim();
-      if (incoming && existingText.endsWith(incoming)) {
+      if (!incoming) return;
+
+      if (jobInput.value.trim() === incoming) {
         showSaveStatus(saveStatus, 'Job description already added', 'success');
         return;
       }
-      const newText = existingText ? `${existingText}\n\n${incoming}` : incoming;
+
+      const newText =
+        request.mode === 'append' && jobInput.value.trim()
+          ? `${jobInput.value.trim()}\n\n${incoming}`
+          : incoming;
       jobInput.value = newText;
       chrome.storage.local.set({ currentOffer: newText });
-      showSaveStatus(saveStatus, 'Job description filled from selection', 'success');
+      showSaveStatus(
+        saveStatus,
+        'Job description filled from selection',
+        'success'
+      );
     }
   });
 }
 
 function initAutoSave({ templateInput, jobInput }) {
-  templateInput.addEventListener('input', function() {
+  templateInput.addEventListener('input', function () {
     chrome.storage.local.set({ defaultCoverLetter: this.value }, () => {
       if (chrome.runtime.lastError) {
-        console.error('Error saving default cover letter:', chrome.runtime.lastError);
+        console.error(
+          'Error saving default cover letter:',
+          chrome.runtime.lastError
+        );
       }
     });
   });
 
-  jobInput.addEventListener('input', function() {
+  jobInput.addEventListener('input', function () {
     chrome.storage.local.set({ currentOffer: this.value }, () => {
       if (chrome.runtime.lastError) {
-        console.error('Error saving job description:', chrome.runtime.lastError);
+        console.error(
+          'Error saving job description:',
+          chrome.runtime.lastError
+        );
       }
     });
+  });
+}
+
+function initResultActions({
+  resultDiv,
+  resultActions,
+  copyResultBtn,
+  insertResultBtn,
+  saveStatus,
+}) {
+  resultActions.style.display = 'none';
+
+  copyResultBtn.addEventListener('click', async () => {
+    const message = resultDiv.textContent.trim();
+    if (!message) return;
+
+    await navigator.clipboard.writeText(message);
+    showSaveStatus(saveStatus, 'Copied to clipboard', 'success');
+  });
+
+  insertResultBtn.addEventListener('click', async () => {
+    const message = resultDiv.textContent.trim();
+    if (!message) return;
+
+    const activeTab = await getActiveTab();
+    if (!activeTab?.id || !globalThis.CoverClipboard) {
+      showSaveStatus(saveStatus, 'No active tab found for insertion', 'error');
+      return;
+    }
+
+    const insertResult = await globalThis.CoverClipboard.insertIntoTab(
+      activeTab.id,
+      message
+    );
+    if (insertResult.success) {
+      showSaveStatus(saveStatus, 'Inserted into the page', 'success');
+      return;
+    }
+
+    showSaveStatus(
+      saveStatus,
+      insertResult.error || 'Could not insert into the page',
+      'error'
+    );
   });
 }
 
@@ -84,7 +234,11 @@ function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
   saveDefaultBtn.addEventListener('click', () => {
     const template = templateInput.value.trim();
     if (!template) {
-      showSaveStatus(saveStatus, 'Please enter a default cover letter to save', 'error');
+      showSaveStatus(
+        saveStatus,
+        'Please enter a default cover letter to save',
+        'error'
+      );
       return;
     }
     saveDefaultBtn.textContent = 'Saving...';
@@ -94,7 +248,11 @@ function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
       saveDefaultBtn.disabled = false;
       if (chrome.runtime.lastError) {
         console.error('Error saving template:', chrome.runtime.lastError);
-        showSaveStatus(saveStatus, 'Failed to save: ' + chrome.runtime.lastError.message, 'error');
+        showSaveStatus(
+          saveStatus,
+          'Failed to save: ' + chrome.runtime.lastError.message,
+          'error'
+        );
       } else {
         showSaveStatus(saveStatus, 'Template saved successfully!', 'success');
       }
@@ -102,12 +260,59 @@ function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
   });
 }
 
-function initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveStatus }) {
+function initClearJob({
+  clearJobBtn,
+  jobInput,
+  resultDiv,
+  resultActions,
+}) {
+  clearJobBtn.addEventListener('click', () => {
+    jobInput.value = '';
+    chrome.storage.local.set({ currentOffer: '' });
+    resultDiv.style.display = 'none';
+    resultActions.style.display = 'none';
+  });
+}
+
+async function getActiveTab() {
+  try {
+    const [activeTab] = await chrome.tabs.query({
+      active: true,
+      currentWindow: true,
+    });
+    return activeTab || null;
+  } catch (_) {
+    return null;
+  }
+}
+
+async function getActiveTabContext() {
+  const activeTab = await getActiveTab();
+  return {
+    title: activeTab?.title || '',
+    url: activeTab?.url || '',
+    tabId: activeTab?.id || null,
+  };
+}
+
+function initGenerate({
+  templateInput,
+  jobInput,
+  generateBtn,
+  resultDiv,
+  resultActions,
+  saveStatus,
+}) {
   generateBtn.addEventListener('click', () => {
     const template = templateInput.value.trim();
     const job = jobInput.value.trim();
     if (!template || !job) {
-      showResult(resultDiv, 'Please fill in both fields before generating.', 'error');
+      showResult(
+        resultDiv,
+        resultActions,
+        'Please fill in both fields before generating.',
+        'error'
+      );
       return;
     }
 
@@ -115,18 +320,65 @@ function initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveSta
     generateBtn.disabled = true;
     (async () => {
       try {
-        if (globalThis.CoverAPI && globalThis.ENV && globalThis.ENV.OPENROUTER_API_KEY) {
-          const generated = await globalThis.CoverAPI.callOpenAI(template, job);
-          showResult(resultDiv, generated || 'No content returned', 'success');
+        if (
+          globalThis.CoverAPI &&
+          globalThis.ENV &&
+          globalThis.ENV.OPENROUTER_API_KEY
+        ) {
+          const pageContext = await getActiveTabContext();
+          const generatedResult =
+            await globalThis.CoverAPI.generateCoverLetterDetailed(
+              template,
+              job,
+              {
+                pageContext,
+              }
+            );
+          const generated = generatedResult?.text || 'No content returned';
+          showResult(resultDiv, resultActions, generated, 'success');
+          chrome.storage.local.set({
+            lastGenerated: generated,
+            generationState: {
+              status: 'success',
+              source: 'popup',
+              finishedAt: new Date().toISOString(),
+            },
+          });
+
           try {
             await navigator.clipboard.writeText(generated || '');
             showSaveStatus(saveStatus, 'Copied to clipboard', 'success');
-          } catch (_) {}
+            if (
+              pageContext.tabId &&
+              globalThis.CoverClipboard &&
+              typeof globalThis.CoverClipboard.showFeedbackInTab ===
+                'function'
+            ) {
+              await globalThis.CoverClipboard.showFeedbackInTab(
+                pageContext.tabId,
+                {
+                  message: 'Cover letter generated and copied to clipboard',
+                }
+              );
+            }
+          } catch (_) {
+            // Clipboard writes can fail in some popup contexts.
+          }
         } else {
-          showResult(resultDiv, 'No OpenRouter API key configured. Please set OPENROUTER_API_KEY in src/config/env.js.', 'error');
+          showResult(
+            resultDiv,
+            resultActions,
+            'No OpenRouter API key configured. Please set OPENROUTER_API_KEY in src/config/env.js.',
+            'error'
+          );
         }
       } catch (e) {
-        showResult(resultDiv, `Generation failed: ${e?.message || e}`, 'error');
+        showResult(
+          resultDiv,
+          resultActions,
+          `Generation failed: ${e?.message || e}`,
+          'error'
+        );
       } finally {
         generateBtn.textContent = 'Generate';
         generateBtn.disabled = false;
@@ -135,7 +387,7 @@ function initGenerate({ templateInput, jobInput, generateBtn, resultDiv, saveSta
   });
 }
 
-function showResult(resultDiv, message, type) {
+function showResult(resultDiv, resultActions, message, type) {
   resultDiv.textContent = message;
   resultDiv.style.display = 'block';
   if (type === 'error') {
@@ -146,23 +398,7 @@ function showResult(resultDiv, message, type) {
     resultDiv.style.background = '#f8f9fa';
   }
 
-  const existing = document.querySelector('.copy-btn');
-  if (existing) existing.remove();
-
-  if (type === 'success') {
-    const copyBtn = document.createElement('button');
-    copyBtn.textContent = 'Copy';
-    copyBtn.className = 'copy-btn';
-
-    copyBtn.addEventListener('click', () => {
-      navigator.clipboard.writeText(message).then(() => {
-        copyBtn.textContent = 'Copied!';
-        setTimeout(() => { copyBtn.textContent = 'Copy'; }, 2000);
-      });
-    });
-
-    resultDiv.insertAdjacentElement('afterend', copyBtn);
-  }
+  resultActions.style.display = type === 'success' ? 'flex' : 'none';
 }
 
 function showSaveStatus(saveStatus, message, type) {

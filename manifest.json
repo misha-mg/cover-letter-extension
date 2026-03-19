@@ -9,8 +9,8 @@
     "activeTab",
     "notifications",
     "scripting",
-      "clipboardWrite",
-      "tabs"
+    "clipboardWrite",
+    "tabs"
   ],
   "background": {
     "service_worker": "src/background/background.js"

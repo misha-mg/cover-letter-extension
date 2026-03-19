@@ -1,12 +1,17 @@
 // OpenRouter wrapper using Vercel AI SDK (ai@5) and @openrouter/ai-sdk-provider.
 // Loads provider lazily to avoid blocking popup/background startup.
-(function(global) {
-  const getPrompt = () => {
-    const prompt = global.CoverPrompt && global.CoverPrompt.DEFAULT_SYSTEM_PROMPT;
-    if (!prompt) {
-      throw new Error('DEFAULT_SYSTEM_PROMPT is missing. Ensure src/api/prompt.js is loaded.');
+(function (global) {
+  const getPromptBuilder = () => {
+    const promptBuilder = global.CoverPrompt;
+    if (
+      !promptBuilder ||
+      typeof promptBuilder.buildGenerationRequest !== 'function'
+    ) {
+      throw new Error(
+        'Prompt builder is missing. Ensure src/api/prompt.js is loaded.'
+      );
     }
-    return prompt;
+    return promptBuilder;
   };
 
   let clientPromise;
@@ -16,23 +21,31 @@
     clientPromise = (async () => {
       const [{ createOpenRouter }, { generateText }] = await Promise.all([
         import('@openrouter/ai-sdk-provider'),
-        import('ai')
+        import('ai'),
       ]);
 
       const apiKey = global.ENV?.OPENROUTER_API_KEY;
       if (!apiKey) throw new Error('OPENROUTER_API_KEY is required');
 
-      const baseURL = (global.ENV?.OPENROUTER_API_BASE || 'https://openrouter.ai/api/v1').replace(/\/$/, '');
-      const headers = { 'X-Title': 'Cover Letter Generator' };
+      const baseURL = (
+        global.ENV?.OPENROUTER_API_BASE || 'https://openrouter.ai/api/v1'
+      ).replace(/\/$/, '');
+      const headers = {
+        'X-Title': global.ENV?.OPENROUTER_TITLE || 'Cover Letter Generator',
+        'HTTP-Referer':
+          global.ENV?.OPENROUTER_REFERER ||
+          'https://cover-letter-extension.local',
+      };
       try {
         const origin = global?.location?.origin;
-        if (origin) headers['HTTP-Referer'] = origin;
+        if (!headers['HTTP-Referer'] && origin)
+          headers['HTTP-Referer'] = origin;
       } catch (_) {}
 
       const openrouter = createOpenRouter({
         apiKey,
         baseURL,
-        headers
+        headers,
       });
 
       return { openrouter, generateText };
@@ -40,28 +53,52 @@
     return clientPromise;
   }
 
-  async function generateCoverLetter(template = '', job = '') {
+  async function generateCoverLetterDetailed(
+    template = '',
+    job = '',
+    options = {}
+  ) {
     const { openrouter, generateText } = await getClient();
     const modelId = global.ENV?.OPENROUTER_MODEL || 'openai/gpt-5-mini';
     const temperature = global.ENV?.TEMPERATURE ?? 0.5;
     const maxTokens = global.ENV?.MAX_TOKENS ?? 1000;
-
-    const prompt = `${getPrompt()}\n\nDefault template:\n${template || ''}\n\nJob description:\n${job || ''}`;
+    const promptBuilder = getPromptBuilder();
+    const request = promptBuilder.buildGenerationRequest({
+      template,
+      job,
+      pageContext: options.pageContext || {},
+    });
 
     const result = await generateText({
       model: openrouter(modelId, { usage: { include: true } }),
-      prompt,
+      system: request.system,
+      prompt: request.prompt,
       temperature,
-      maxTokens
+      maxTokens,
     });
 
-    const text = result?.text || (Array.isArray(result?.content) && result.content[0]?.text) || '';
+    const text =
+      result?.text ||
+      (Array.isArray(result?.content) && result.content[0]?.text) ||
+      '';
     if (!text) throw new Error('Empty response from model');
-    return text;
+
+    return {
+      text,
+    };
   }
 
-  const callOpenAI = (defaultCoverLetter, currentOffer) => generateCoverLetter(defaultCoverLetter || '', currentOffer || '');
+  async function generateCoverLetter(template = '', job = '', options = {}) {
+    const result = await generateCoverLetterDetailed(template, job, options);
+    return result.text;
+  }
 
-  global.CoverAPI = { generateCoverLetter, callOpenAI };
+  const callOpenAI = (defaultCoverLetter, currentOffer, options = {}) =>
+    generateCoverLetter(defaultCoverLetter || '', currentOffer || '', options);
+
+  global.CoverAPI = {
+    generateCoverLetter,
+    generateCoverLetterDetailed,
+    callOpenAI,
+  };
 })(typeof window !== 'undefined' ? window : globalThis);
-

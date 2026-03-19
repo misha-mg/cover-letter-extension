@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+<!doctype html>
 <html>
   <head>
     <link rel="stylesheet" href="../styles/popup.css" />
@@ -30,16 +30,27 @@
           id="currentOffer"
           placeholder="Paste the job description here..."
         ></textarea>
+        <div class="button-group compact">
+          <button id="clearJobBtn" class="secondary-btn">Clear job text</button>
+        </div>
       </div>
 
       <button id="generateBtn" class="generate-btn">Generate</button>
 
       <div id="result" class="result"></div>
+      <div id="resultActions" class="result-actions">
+        <button id="copyResultBtn" class="secondary-btn">Copy</button>
+        <button id="insertResultBtn" class="secondary-btn">
+          Insert into page
+        </button>
+      </div>
     </div>
 
     <script src="../config/env.js"></script>
+    <script src="../api/candidate-profile.js"></script>
     <script src="../api/prompt.js"></script>
     <script src="../../dist/openrouter.bundle.js"></script>
+    <script src="../api/clipboard.js"></script>
     <script src="../scripts/popup.js"></script>
   </body>
 </html>

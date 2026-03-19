@@ -18,4 +18,3 @@
   },
   "ignorePatterns": ["dist/", "node_modules/"]
 }
-
