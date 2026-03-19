@@ -4,6 +4,7 @@
 .env.local
 .env.*.local
 env.js
+/src/config/env.js
 !.env.example
 
 # --- Logs ---

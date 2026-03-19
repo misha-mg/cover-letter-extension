@@ -60,12 +60,7 @@ function initStorageSync({
   resultActions,
 }) {
   chrome.storage.local.get(
-    [
-      'defaultCoverLetter',
-      'currentOffer',
-      'autoGenerate',
-      'lastGenerated',
-    ],
+    ['defaultCoverLetter', 'currentOffer', 'autoGenerate', 'lastGenerated'],
     (result) => {
       if (chrome.runtime.lastError) {
         console.error('Error loading from storage:', chrome.runtime.lastError);
@@ -244,7 +239,7 @@ function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
     saveDefaultBtn.textContent = 'Saving...';
     saveDefaultBtn.disabled = true;
     chrome.storage.local.set({ defaultCoverLetter: template }, () => {
-      saveDefaultBtn.textContent = 'Save as Template';
+      saveDefaultBtn.textContent = 'Save as template';
       saveDefaultBtn.disabled = false;
       if (chrome.runtime.lastError) {
         console.error('Error saving template:', chrome.runtime.lastError);
@@ -260,12 +255,7 @@ function initSaveTemplate({ templateInput, saveDefaultBtn, saveStatus }) {
   });
 }
 
-function initClearJob({
-  clearJobBtn,
-  jobInput,
-  resultDiv,
-  resultActions,
-}) {
+function initClearJob({ clearJobBtn, jobInput, resultDiv, resultActions }) {
   clearJobBtn.addEventListener('click', () => {
     jobInput.value = '';
     chrome.storage.local.set({ currentOffer: '' });
@@ -351,8 +341,7 @@ function initGenerate({
             if (
               pageContext.tabId &&
               globalThis.CoverClipboard &&
-              typeof globalThis.CoverClipboard.showFeedbackInTab ===
-                'function'
+              typeof globalThis.CoverClipboard.showFeedbackInTab === 'function'
             ) {
               await globalThis.CoverClipboard.showFeedbackInTab(
                 pageContext.tabId,

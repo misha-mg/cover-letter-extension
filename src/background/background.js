@@ -101,7 +101,22 @@ async function generateAndCopy(tabId, source = 'selection') {
   }
 
   const generated = generationResult.text;
-  const insertResult = { success: false };
+  let insertResult = { success: false };
+  if (
+    tabId &&
+    globalThis.CoverClipboard &&
+    typeof globalThis.CoverClipboard.insertIntoTab === 'function'
+  ) {
+    try {
+      insertResult = await globalThis.CoverClipboard.insertIntoTab(
+        tabId,
+        generated
+      );
+    } catch (e) {
+      insertResult = { success: false, error: e?.message };
+      console.error('Insert into tab failed', e);
+    }
+  }
 
   let copySuccess = false;
   if (

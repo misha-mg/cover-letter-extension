@@ -228,10 +228,7 @@ function getFeedbackScript() {
         oscillator.frequency.setValueAtTime(frequency, now + start);
         gain.gain.setValueAtTime(0.0001, now + start);
         gain.gain.exponentialRampToValueAtTime(0.9, now + start + 0.02);
-        gain.gain.exponentialRampToValueAtTime(
-          0.0001,
-          now + start + duration
-        );
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + start + duration);
 
         oscillator.connect(gain);
         gain.connect(masterGain);
@@ -367,10 +364,7 @@ const CoverClipboard = {
 
   showFeedbackInTab: async function (
     tabId,
-    {
-      message = 'Cover letter copied to clipboard',
-      tone = 'success',
-    } = {}
+    { message = 'Cover letter copied to clipboard', tone = 'success' } = {}
   ) {
     if (!tabId) return false;
 

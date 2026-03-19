@@ -59,7 +59,7 @@
     options = {}
   ) {
     const { openrouter, generateText } = await getClient();
-    const modelId = global.ENV?.OPENROUTER_MODEL || 'openai/gpt-5-mini';
+    const modelId = global.ENV?.OPENROUTER_MODEL || 'openai/gpt-4o-mini';
     const temperature = global.ENV?.TEMPERATURE ?? 0.5;
     const maxTokens = global.ENV?.MAX_TOKENS ?? 1000;
     const promptBuilder = getPromptBuilder();

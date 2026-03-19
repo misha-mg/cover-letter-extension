@@ -1,3 +1,5 @@
+import eslintConfigPrettier from 'eslint-config-prettier';
+
 export default [
   {
     ignores: ['dist/**', 'node_modules/**'],
@@ -13,7 +15,6 @@ export default [
         CoverClipboard: 'readonly',
         CoverPrompt: 'readonly',
         CoverCandidateProfile: 'readonly',
-        CoverJobParser: 'readonly',
         ENV: 'readonly',
       },
     },
@@ -28,4 +29,5 @@ export default [
       ],
     },
   },
+  eslintConfigPrettier,
 ];

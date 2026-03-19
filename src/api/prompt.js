@@ -27,11 +27,7 @@ Rules:
 - Output plain text only. No bullet points, no markdown, no headings.
 `;
 
-function buildGenerationRequest({
-  template = '',
-  job = '',
-  pageContext = {},
-}) {
+function buildGenerationRequest({ template = '', job = '', pageContext = {} }) {
   const profile = getCandidateProfile();
   const profileSnapshot =
     __COVER_PROMPT_GLOBAL__.CoverCandidateProfile.buildProfileSnapshot(profile);
